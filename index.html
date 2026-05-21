@@ -256,6 +256,10 @@
       opacity: 0.3;
     }
 
+    .beep-row.dragging .tooltip {
+      display: none;
+    }
+
     .beep-row.drag-over-top {
       box-shadow: 0 -2px 0 var(--accent);
       border-radius: 0;
@@ -500,6 +504,28 @@
       opacity: 1;
     }
 
+    .drag-handle-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drag-handle-wrap:hover .tooltip {
+      opacity: 1;
+    }
+
+    .drag-handle-wrap .tooltip {
+      left: 0;
+      transform: none;
+      white-space: nowrap;
+    }
+
+    .drag-handle-wrap .tooltip::after {
+      left: 16px;
+      transform: none;
+    }
+
     /* PowerShell preview */
     .ps-panel {
       background: var(--surface);
@@ -625,6 +651,98 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       overflow: hidden;
+    }
+
+    /* Keyboard shortcuts tips */
+    .shortcuts-details {
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .shortcuts-details summary {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      background: var(--surface2);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      outline: none;
+    }
+
+    .shortcuts-details summary::-webkit-details-marker { display: none; }
+
+    .shortcuts-details summary::before {
+      content: '▶';
+      font-size: 8px;
+      color: var(--accent-dim);
+      transition: transform 0.15s;
+      display: inline-block;
+    }
+
+    .shortcuts-details[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .shortcuts-details summary:hover {
+      color: var(--text);
+    }
+
+    .shortcuts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 12px 16px;
+      display: block;
+    }
+
+    .shortcuts-table tr + tr td {
+      border-top: 1px solid var(--border);
+    }
+
+    .shortcuts-table td {
+      padding: 7px 8px;
+      color: var(--text-dim);
+      vertical-align: middle;
+    }
+
+    .shortcuts-table td:first-child {
+      color: var(--text);
+      white-space: nowrap;
+      width: 1%;
+    }
+
+    .shortcuts-table kbd {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-bottom-width: 2px;
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      margin-right: 2px;
+    }
+
+    .shortcuts-section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 8px 4px;
+      display: block;
     }
 
     .import-header {
@@ -782,6 +900,40 @@
     </div>
   </div>
 
+  <details class="shortcuts-details">
+    <summary>キーボードショートカット</summary>
+    <table class="shortcuts-table">
+      <tbody>
+        <tr><td colspan="2"><span class="shortcuts-section-label">再生</span></td></tr>
+        <tr>
+          <td><kbd>Ctrl</kbd><kbd>Enter</kbd></td>
+          <td>再生 / 停止</td>
+        </tr>
+        <tr><td colspan="2"><span class="shortcuts-section-label">行の編集</span></td></tr>
+        <tr>
+          <td><kbd>Alt</kbd><kbd>N</kbd></td>
+          <td>行を追加（フォーカス行の直下）</td>
+        </tr>
+        <tr>
+          <td><kbd>Alt</kbd><kbd>Delete</kbd></td>
+          <td>フォーカス中の行を削除</td>
+        </tr>
+        <tr>
+          <td><kbd>Alt</kbd><kbd>↑</kbd></td>
+          <td>フォーカス中の行を上に移動</td>
+        </tr>
+        <tr>
+          <td><kbd>Alt</kbd><kbd>↓</kbd></td>
+          <td>フォーカス中の行を下に移動</td>
+        </tr>
+        <tr>
+          <td><kbd>Shift</kbd><kbd>Alt</kbd><kbd>↓</kbd></td>
+          <td>フォーカス中の行を下に複製</td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
   <div class="import-section">
     <div class="import-header">コマンドを貼り付けて読み込む</div>
     <textarea id="import-input" placeholder="[console]::beep(1047, 480); [console]::beep(660, 180); ...&#10;play -n synth 0.480 square 1047; ...&#10;beep -f 1047 -l 480; ..."></textarea>
@@ -879,7 +1031,10 @@
       div.dataset.rowId = row.id;
       div.draggable = true;
       div.innerHTML = `
-        <div class="drag-handle" title="ドラッグで並び替え">⠿</div>
+        <div class="drag-handle-wrap">
+          <div class="drag-handle">⠿</div>
+          <div class="tooltip">ドラッグで並び替え<br><kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> 移動<br><kbd>Shift+Alt+↓</kbd> 複製</div>
+        </div>
         <div class="row-num">${String(idx + 1).padStart(2, '0')}</div>
         <div class="freq-wrap">
           <input
@@ -945,10 +1100,57 @@
         updatePreview();
       });
 
+      const freqInput = div.querySelector('.freq-input');
+      const msInput = div.querySelectorAll('input')[1];
+      const deleteBtn = div.querySelector('.delete-btn');
+
+      function getRowEls() { return Array.from(document.querySelectorAll('.beep-row')); }
+
+      function navigateVertical(isFreq, isDeleteBtn, direction) {
+        const rowEls = getRowEls();
+        const curIdx = rowEls.indexOf(div);
+        const targetIdx = direction === 'up' ? curIdx - 1 : curIdx + 1;
+        if (targetIdx < 0 || targetIdx >= rowEls.length) return;
+        const target = isDeleteBtn
+          ? rowEls[targetIdx].querySelector('.delete-btn')
+          : isFreq
+            ? rowEls[targetIdx].querySelector('.freq-input')
+            : rowEls[targetIdx].querySelectorAll('input')[1];
+        if (target) target.focus();
+      }
+
       // Input fields should not trigger drag
       div.querySelectorAll('input').forEach(input => {
         input.addEventListener('mousedown', e => e.stopPropagation());
-        input.addEventListener('focus', () => { lastFocusedRowId = row.id; });
+        input.addEventListener('focus', () => {
+          lastFocusedRowId = row.id;
+          input.select();
+        });
+        input.addEventListener('keydown', e => {
+          const isFreq = input === freqInput;
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateVertical(isFreq, false, e.key === 'ArrowUp' ? 'up' : 'down');
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (isFreq) msInput.focus();
+            else deleteBtn.focus();
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (!isFreq) freqInput.focus();
+          }
+        });
+      });
+
+      deleteBtn.addEventListener('focus', () => { lastFocusedRowId = row.id; });
+      deleteBtn.addEventListener('keydown', e => {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          navigateVertical(false, true, e.key === 'ArrowUp' ? 'up' : 'down');
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          msInput.focus();
+        }
       });
 
       container.appendChild(div);
@@ -1322,6 +1524,77 @@
         const newRows = document.querySelectorAll('.beep-row');
         const focusTarget = newRows[Math.min(idx, newRows.length - 1)];
         if (focusTarget) focusTarget.querySelector('.freq-input').focus();
+      }
+      return;
+    }
+    // Alt+↑ → フォーカス中の行を上に移動
+    if (e.key === 'ArrowUp' && e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      const rowEl = e.target.closest('.beep-row');
+      if (rowEl) {
+        const id = parseInt(rowEl.dataset.rowId, 10);
+        const focusedInput = document.activeElement;
+        const isMs = focusedInput && focusedInput.classList.contains('row-input') && !focusedInput.classList.contains('freq-input');
+        const idx = rows.findIndex(r => r.id === id);
+        if (idx > 0) {
+          const [moved] = rows.splice(idx, 1);
+          rows.splice(idx - 1, 0, moved);
+          renderRows();
+          updatePreview();
+          const newRowEl = document.querySelector(`[data-row-id="${id}"]`);
+          if (newRowEl) {
+            const target = isMs
+              ? newRowEl.querySelectorAll('.row-input')[1]
+              : newRowEl.querySelector('.freq-input');
+            if (target) target.focus();
+          }
+        }
+      }
+      return;
+    }
+    // Alt+↓ → フォーカス中の行を下に移動
+    // Shift+Alt+↓ → フォーカス中の行を下に複製
+    if (e.key === 'ArrowDown' && e.altKey) {
+      e.preventDefault();
+      const rowEl = e.target.closest('.beep-row');
+      if (rowEl) {
+        const id = parseInt(rowEl.dataset.rowId, 10);
+        const focusedInput = document.activeElement;
+        const isMs = focusedInput && focusedInput.classList.contains('row-input') && !focusedInput.classList.contains('freq-input');
+        if (e.shiftKey) {
+          // 複製: 同じhz/msで新しい行を直下に挿入
+          const srcRow = rows.find(r => r.id === id);
+          if (srcRow) {
+            const newId = rowId++;
+            const idx = rows.findIndex(r => r.id === id);
+            rows.splice(idx + 1, 0, { id: newId, hz: srcRow.hz, ms: srcRow.ms });
+            renderRows();
+            updatePreview();
+            const newRowEl = document.querySelector(`[data-row-id="${newId}"]`);
+            if (newRowEl) {
+              const target = isMs
+                ? newRowEl.querySelectorAll('.row-input')[1]
+                : newRowEl.querySelector('.freq-input');
+              if (target) target.focus();
+            }
+          }
+        } else {
+          // 移動: 1行下へ
+          const idx = rows.findIndex(r => r.id === id);
+          if (idx < rows.length - 1) {
+            const [moved] = rows.splice(idx, 1);
+            rows.splice(idx + 1, 0, moved);
+            renderRows();
+            updatePreview();
+            const newRowEl = document.querySelector(`[data-row-id="${id}"]`);
+            if (newRowEl) {
+              const target = isMs
+                ? newRowEl.querySelectorAll('.row-input')[1]
+                : newRowEl.querySelector('.freq-input');
+              if (target) target.focus();
+            }
+          }
+        }
       }
       return;
     }
