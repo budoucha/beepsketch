@@ -1,4 +1,4 @@
-# BeepSim
+# BeepSketch
 
 `index.html` に全機能が入った単一HTMLファイルのアプリ。
 サーバー不要、ブラウザで直接開いて使う（file://）。GitHubPages でも公開中。

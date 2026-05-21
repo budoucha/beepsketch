@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BeepSim</title>
+  <title>BeepSketch</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -711,7 +711,7 @@
 <body>
 <div class="container">
   <header>
-    <div class="logo">BeepSim</div>
+    <div class="logo">BeepSketch</div>
     <div class="logo-sub">Console Beep Sequencer</div>
   </header>
 
@@ -1146,7 +1146,7 @@
   });
 
   function saveState() {
-    localStorage.setItem('beepsim', JSON.stringify({
+    localStorage.setItem('beepsketch', JSON.stringify({
       rows: rows.map(r => ({ hz: r.hz, ms: r.ms })),
       gapMs: document.getElementById('gapMs').value,
       disableGap: document.getElementById('disableGap').checked,
@@ -1156,7 +1156,7 @@
 
   function loadState() {
     try {
-      const saved = JSON.parse(localStorage.getItem('beepsim'));
+      const saved = JSON.parse(localStorage.getItem('beepsketch'));
       if (!saved) return false;
       if (saved.gapMs !== undefined) document.getElementById('gapMs').value = saved.gapMs;
       if (saved.disableGap !== undefined) document.getElementById('disableGap').checked = saved.disableGap;
