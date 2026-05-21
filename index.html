@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; }
 
     :root {
       --bg: #0d0f12;
@@ -59,19 +60,22 @@
     }
 
     /* Background image */
-    body::before {
-      content: '';
+    .bg-decor {
       position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-decor::after {
+      content: '';
+      position: absolute;
       bottom: calc(-0.25 * min(100vw, 80vh));
       right: calc(-0.25 * min(100vw, 80vh));
       width: min(100vw, 80vh);
       height: min(100vw, 80vh);
       background: url('bg.png') no-repeat center / contain;
       opacity: 0.06;
-      pointer-events: none;
-      z-index: 0;
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
     }
 
     .container {
@@ -409,9 +413,22 @@
       background: rgba(224,80,80,0.08);
     }
 
+    /* Add button inside rows-container */
+    .add-btn-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 4px 0;
+    }
+
+    .add-btn-wrap .btn-add {
+      width: calc(100% * 4 / 9);
+      justify-content: center;
+    }
+
     /* Action row */
     .actions {
       display: flex;
+      justify-content: center;
       gap: 10px;
       margin-bottom: 32px;
       flex-wrap: wrap;
@@ -476,7 +493,6 @@
       background: var(--surface);
       color: var(--text-dim);
       border: 1px solid var(--border);
-      margin-left: auto;
     }
 
     .btn-reset:hover {
@@ -552,6 +568,10 @@
 
     .btn-wrap:hover .tooltip {
       opacity: 1;
+    }
+
+    @media (hover: none) {
+      .tooltip { display: none; }
     }
 
     .drag-handle-wrap {
@@ -884,6 +904,7 @@
   </style>
 </head>
 <body>
+<div class="bg-decor" aria-hidden="true"></div>
 <div class="container">
   <header>
     <div class="logo"><img src="icon_256.svg" alt="" style="height:1em;vertical-align:middle;margin-right:0.3em;position:relative;top:-0.05em;">BeepSketch</div>
@@ -921,10 +942,6 @@
         <span id="playLabel">再生</span>
       </button>
       <div class="tooltip">再生 / 停止<kbd>Ctrl+Enter</kbd></div>
-    </div>
-    <div class="btn-wrap">
-      <button class="btn btn-add" onclick="addRow()">＋ 追加</button>
-      <div class="tooltip">行を追加<kbd>Alt+N</kbd></div>
     </div>
     <div class="btn-wrap">
       <button class="btn btn-export" id="exportBtn" onclick="exportWav()">↓ WAV</button>
@@ -1211,6 +1228,14 @@
 
       container.appendChild(div);
     });
+
+    const addBtnWrap = document.createElement('div');
+    addBtnWrap.className = 'btn-wrap add-btn-wrap';
+    addBtnWrap.innerHTML = `
+      <button class="btn btn-add" onclick="addRow()">＋ 追加</button>
+      <div class="tooltip">行を追加<kbd>Alt+N</kbd></div>
+    `;
+    container.appendChild(addBtnWrap);
   }
 
   function buildSequence() {
