@@ -244,6 +244,13 @@
     .col-header:nth-child(3) { padding-left: 12px; }
     .col-header:nth-child(4) { padding-left: 12px; }
 
+    .col-header-hint {
+      color: var(--accent-dim);
+      font-size: 9px;
+      letter-spacing: 0;
+      font-weight: normal;
+    }
+
     /* Rows */
     .rows-container {
       display: flex;
@@ -928,7 +935,7 @@
   <div class="col-headers">
     <div class="col-header"></div>
     <div class="col-header"></div>
-    <div class="col-header">周波数 (Hz)</div>
+    <div class="col-header">周波数 (Hz)　<span class="col-header-hint">C4, E#5, Bb3 なども可</span></div>
     <div class="col-header">長さ (ms)</div>
     <div class="col-header"></div>
   </div>
@@ -1112,8 +1119,8 @@
         <div class="freq-wrap">
           <input
             class="row-input freq-input"
-            type="number"
-            min="37" max="32767"
+            type="text"
+            inputmode="numeric"
             placeholder="空欄 = sleep"
             value="${row.hz}"
             oninput="updateRow(${row.id}, 'hz', this.value)"
@@ -1192,6 +1199,18 @@
         if (target) target.focus();
       }
 
+      function convertFreqInput() {
+        const v = freqInput.value.trim();
+        if (v && isNaN(parseInt(v))) {
+          const hz = noteToHz(v);
+          if (hz !== null) {
+            freqInput.value = String(hz);
+            updateRow(row.id, 'hz', String(hz));
+          }
+        }
+      }
+      freqInput.addEventListener('blur', convertFreqInput);
+
       // Input fields should not trigger drag
       div.querySelectorAll('input').forEach(input => {
         input.addEventListener('mousedown', e => e.stopPropagation());
@@ -1211,6 +1230,9 @@
           } else if (e.key === 'ArrowLeft') {
             e.preventDefault();
             if (!isFreq) freqInput.focus();
+          } else if (e.key === 'Enter' && isFreq) {
+            convertFreqInput();
+            msInput.focus();
           }
         });
       });
@@ -1238,6 +1260,23 @@
     container.appendChild(addBtnWrap);
   }
 
+  function noteToHz(str) {
+    const m = str.trim().match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
+    if (!m) return null;
+    const semitones = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+    const base = semitones[m[1].toLowerCase()];
+    const acc = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
+    const octave = parseInt(m[3]);
+    const midi = (octave + 1) * 12 + base + acc;
+    return Math.round(440 * Math.pow(2, (midi - 69) / 12));
+  }
+
+  function parseHz(str) {
+    const n = parseInt(str);
+    if (!isNaN(n)) return n;
+    return noteToHz(str);
+  }
+
   function buildSequence() {
     const gapMs = parseInt(document.getElementById('gapMs').value) || 0;
     const disableGap = document.getElementById('disableGap').checked;
@@ -1249,7 +1288,9 @@
       if (hz === '') {
         seq.push({ type: 'sleep', ms });
       } else {
-        seq.push({ type: 'beep', hz: parseInt(hz), ms });
+        const hzNum = parseHz(hz);
+        if (!hzNum) return;
+        seq.push({ type: 'beep', hz: hzNum, ms });
       }
       // Add gap after each item except last
       if (!disableGap && gapMs > 0 && idx < rows.length - 1) {
@@ -1269,19 +1310,25 @@
         if (hz === '') {
           parts.push(`<span class="ps-sleep">Start-Sleep</span> <span class="ps-cmd">-Milliseconds</span> <span class="ps-dur">${ms}</span>`);
         } else {
-          parts.push(`<span class="ps-cmd">[console]::beep</span>(<span class="ps-freq">${hz}</span>, <span class="ps-dur">${ms}</span>)`);
+          const hzNum = parseHz(hz);
+          if (!hzNum) return;
+          parts.push(`<span class="ps-cmd">[console]::beep</span>(<span class="ps-freq">${hzNum}</span>, <span class="ps-dur">${ms}</span>)`);
         }
       } else if (tab === 'mac') {
         if (hz === '') {
           parts.push(`<span class="ps-sleep">sleep</span> <span class="ps-dur">${formatSec(ms)}</span>`);
         } else {
-          parts.push(`<span class="ps-cmd">play</span> <span class="ps-flag">-n synth</span> <span class="ps-dur">${formatSec(ms)}</span> <span class="ps-flag">square</span> <span class="ps-freq">${hz}</span>`);
+          const hzNum = parseHz(hz);
+          if (!hzNum) return;
+          parts.push(`<span class="ps-cmd">play</span> <span class="ps-flag">-n synth</span> <span class="ps-dur">${formatSec(ms)}</span> <span class="ps-flag">square</span> <span class="ps-freq">${hzNum}</span>`);
         }
       } else if (tab === 'linux') {
         if (hz === '') {
           parts.push(`<span class="ps-sleep">sleep</span> <span class="ps-dur">${formatSec(ms)}</span>`);
         } else {
-          parts.push(`<span class="ps-cmd">beep</span> <span class="ps-flag">-f</span> <span class="ps-freq">${hz}</span> <span class="ps-flag">-l</span> <span class="ps-dur">${ms}</span>`);
+          const hzNum = parseHz(hz);
+          if (!hzNum) return;
+          parts.push(`<span class="ps-cmd">beep</span> <span class="ps-flag">-f</span> <span class="ps-freq">${hzNum}</span> <span class="ps-flag">-l</span> <span class="ps-dur">${ms}</span>`);
         }
       }
     });
@@ -1309,13 +1356,13 @@
       if (ms <= 0) return;
       if (currentTab === 'ps') {
         if (hz === '') parts.push(`Start-Sleep -Milliseconds ${ms}`);
-        else parts.push(`[console]::beep(${hz}, ${ms})`);
+        else { const hzNum = parseHz(hz); if (hzNum) parts.push(`[console]::beep(${hzNum}, ${ms})`); }
       } else if (currentTab === 'mac') {
         if (hz === '') parts.push(`sleep ${formatSec(ms)}`);
-        else parts.push(`play -n synth ${formatSec(ms)} square ${hz}`);
+        else { const hzNum = parseHz(hz); if (hzNum) parts.push(`play -n synth ${formatSec(ms)} square ${hzNum}`); }
       } else if (currentTab === 'linux') {
         if (hz === '') parts.push(`sleep ${formatSec(ms)}`);
-        else parts.push(`beep -f ${hz} -l ${ms}`);
+        else { const hzNum = parseHz(hz); if (hzNum) parts.push(`beep -f ${hzNum} -l ${ms}`); }
       }
     });
     return parts.join('; ');
