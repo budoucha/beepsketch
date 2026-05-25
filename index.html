@@ -340,6 +340,12 @@
       animation: rowPulse 0.8s ease-in-out infinite;
     }
 
+    .row-play-btn.row-sequence-active {
+      color: var(--accent);
+      background: var(--accent-glow);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
     @keyframes rowPulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
@@ -1033,6 +1039,7 @@
   let currentTab = 'ps';
   let playingRowId = null;
   let rowPlayStopFlag = false;
+  let sequenceActiveRowId = null;
 
   const TAB_HINTS = {
     ps:    null,
@@ -1286,11 +1293,11 @@
       const ms = parseInt(row.ms) || 0;
       if (ms <= 0) return;
       if (hz === '') {
-        seq.push({ type: 'sleep', ms });
+        seq.push({ type: 'sleep', ms, rowId: row.id });
       } else {
         const hzNum = parseHz(hz);
         if (!hzNum) return;
-        seq.push({ type: 'beep', hz: hzNum, ms });
+        seq.push({ type: 'beep', hz: hzNum, ms, rowId: row.id });
       }
       // Add gap after each item except last
       if (!disableGap && gapMs > 0 && idx < rows.length - 1) {
@@ -1376,6 +1383,10 @@
 
     for (const item of seq) {
       if (stopFlag) break;
+      if (item.rowId != null) {
+        sequenceActiveRowId = item.rowId;
+        updateSequenceHighlight();
+      }
       if (item.type === 'beep') {
         await playBeep(ctx, item.hz, item.ms);
       } else {
@@ -1393,6 +1404,8 @@
       elapsed += item.ms;
       progressFill.style.width = `${Math.min(100, (elapsed / totalMs) * 100)}%`;
     }
+    sequenceActiveRowId = null;
+    updateSequenceHighlight();
     progressFill.style.width = '0%';
   }
 
@@ -1441,6 +1454,13 @@
       const active = id === playingRowId;
       btn.textContent = active ? '⏹' : '▶';
       btn.classList.toggle('row-playing', active);
+    });
+  }
+
+  function updateSequenceHighlight() {
+    document.querySelectorAll('.row-play-btn').forEach(btn => {
+      const id = parseInt(btn.dataset.playRowId, 10);
+      btn.classList.toggle('row-sequence-active', id === sequenceActiveRowId);
     });
   }
 
